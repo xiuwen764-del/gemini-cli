@@ -91,7 +91,8 @@ describe('browserAgentFactory', () => {
       );
 
       expect(definition.name).toBe(BrowserAgentDefinition.name);
-      expect(definition.toolConfig?.tools).toHaveLength(2);
+      // 2 MCP tools + 1 delegate_to_visual_agent tool
+      expect(definition.toolConfig?.tools).toHaveLength(3);
     });
 
     it('should return browser manager for cleanup', async () => {

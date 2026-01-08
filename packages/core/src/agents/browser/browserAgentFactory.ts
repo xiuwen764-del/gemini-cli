@@ -16,14 +16,17 @@
  */
 
 import type { Config } from '../../config/config.js';
+import { AuthType } from '../../core/contentGenerator.js';
 import type { LocalAgentDefinition } from '../types.js';
 import type { MessageBus } from '../../confirmation-bus/message-bus.js';
+import type { AnyDeclarativeTool } from '../../tools/tools.js';
 import { BrowserManager } from './browserManager.js';
 import {
   BrowserAgentDefinition,
   type BrowserTaskResultSchema,
 } from './browserAgentDefinition.js';
 import { createMcpDeclarativeTools } from './mcpToolWrapper.js';
+import { createAnalyzeScreenshotTool } from './analyzeScreenshot.js';
 import { debugLogger } from '../../utils/debugLogger.js';
 
 /**
@@ -62,16 +65,50 @@ export async function createBrowserAgentDefinition(
   // These tools dispatch to browserManager's isolated client
   const mcpTools = await createMcpDeclarativeTools(browserManager, messageBus);
 
+  // Create visual agent delegation tool
+  const visualDelegationTool = createAnalyzeScreenshotTool(
+    browserManager,
+    config,
+    messageBus,
+  );
+
+  // Check if visual agent model is available for current auth type.
+  // The visual agent model (computer-use) is only available via Gemini API key
+  // or Vertex AI, not via GCA/OAuth or Cloud Shell.
+  const isVisualModelAvailable = (() => {
+    const authType = config.getContentGeneratorConfig()?.authType;
+    if (
+      authType === AuthType.LOGIN_WITH_GOOGLE ||
+      authType === AuthType.LEGACY_CLOUD_SHELL ||
+      authType === AuthType.COMPUTE_ADC
+    ) {
+      return false;
+    }
+    return true;
+  })();
+
+  // Combine all tools — include visual delegation only if model is available
+  const allTools: AnyDeclarativeTool[] = isVisualModelAvailable
+    ? [...mcpTools, visualDelegationTool]
+    : [...mcpTools];
+
+  if (!isVisualModelAvailable) {
+    debugLogger.log(
+      `Visual agent model not available for current auth type. ` +
+        `Visual agent delegation disabled.`,
+    );
+  }
+
   debugLogger.log(
-    `Created ${mcpTools.length} isolated MCP tools for browser agent: ` +
-      mcpTools.map((t) => t.name).join(', '),
+    `Created ${allTools.length} tools for browser agent: ` +
+      allTools.map((t) => t.name).join(', '),
   );
 
   // Create configured definition with tools
   const definition: LocalAgentDefinition<typeof BrowserTaskResultSchema> = {
     ...BrowserAgentDefinition,
     toolConfig: {
-      tools: mcpTools,
+      tools: allTools,
     },
   };
 
