@@ -64,12 +64,29 @@ export async function createBrowserAgentDefinition(
   // Create declarative tools from dynamically discovered MCP tools
   // These tools dispatch to browserManager's isolated client
   const mcpTools = await createMcpDeclarativeTools(browserManager, messageBus);
+  const availableToolNames = mcpTools.map((t) => t.name);
 
-  // Create visual agent delegation tool
-  const visualDelegationTool = createAnalyzeScreenshotTool(
-    browserManager,
-    config,
-    messageBus,
+  // Validate required semantic tools are available
+  const requiredSemanticTools = [
+    'click',
+    'fill',
+    'navigate_page',
+    'take_snapshot',
+  ];
+  const missingSemanticTools = requiredSemanticTools.filter(
+    (t) => !availableToolNames.includes(t),
+  );
+  if (missingSemanticTools.length > 0) {
+    debugLogger.warn(
+      `Semantic tools missing (${missingSemanticTools.join(', ')}). ` +
+        'Some browser interactions may not work correctly.',
+    );
+  }
+
+  // Only click_at is strictly required — text input can use press_key or fill.
+  const requiredVisualTools = ['click_at'];
+  const missingVisualTools = requiredVisualTools.filter(
+    (t) => !availableToolNames.includes(t),
   );
 
   // Check if visual agent model is available for current auth type.
@@ -87,16 +104,37 @@ export async function createBrowserAgentDefinition(
     return true;
   })();
 
-  // Combine all tools — include visual delegation only if model is available
-  const allTools: AnyDeclarativeTool[] = isVisualModelAvailable
-    ? [...mcpTools, visualDelegationTool]
-    : [...mcpTools];
+  // Create all tools - visual delegation only if visual tools are available
+  const allTools: AnyDeclarativeTool[] = [...mcpTools];
 
-  if (!isVisualModelAvailable) {
+  if (missingVisualTools.length > 0) {
+    debugLogger.log(
+      `Visual tools missing (${missingVisualTools.join(', ')}). ` +
+        `Visual agent delegation disabled. Ensure chrome-devtools-mcp is started with --experimental-vision.`,
+    );
+    if (printOutput) {
+      printOutput(
+        `⚠️ Visual tools unavailable - coordinate-based actions disabled.`,
+      );
+    }
+  } else if (!isVisualModelAvailable) {
     debugLogger.log(
       `Visual agent model not available for current auth type. ` +
         `Visual agent delegation disabled.`,
     );
+    if (printOutput) {
+      printOutput(
+        `⚠️ Visual agent unavailable for current auth type - coordinate-based actions disabled.`,
+      );
+    }
+  } else {
+    // Create visual analysis tool only if visual tools are available
+    const visualDelegationTool = createAnalyzeScreenshotTool(
+      browserManager,
+      config,
+      messageBus,
+    );
+    allTools.push(visualDelegationTool);
   }
 
   debugLogger.log(
@@ -105,8 +143,10 @@ export async function createBrowserAgentDefinition(
   );
 
   // Create configured definition with tools
+  // BrowserAgentDefinition is a factory function - call it with config
+  const baseDefinition = BrowserAgentDefinition(config);
   const definition: LocalAgentDefinition<typeof BrowserTaskResultSchema> = {
-    ...BrowserAgentDefinition,
+    ...baseDefinition,
     toolConfig: {
       tools: allTools,
     },

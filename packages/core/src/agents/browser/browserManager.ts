@@ -109,7 +109,7 @@ export class BrowserManager {
       undefined,
       { timeout: MCP_TIMEOUT_MS },
     );
-    return result as McpToolCallResult;
+    return result as unknown as McpToolCallResult;
   }
 
   /**
@@ -181,15 +181,17 @@ export class BrowserManager {
     );
 
     // Build args for chrome-devtools-mcp
+    const browserConfig = this.config.getBrowserAgentConfig();
+    const sessionMode = browserConfig.customConfig.sessionMode ?? 'isolated';
+
     const mcpArgs = [
       '-y',
       `chrome-devtools-mcp@${CHROME_DEVTOOLS_MCP_VERSION}`,
-      '--isolated',
+      sessionMode === 'existing' ? '--existing' : '--isolated',
       '--experimental-vision',
     ];
 
     // Add optional settings from config
-    const browserConfig = this.config.getBrowserAgentConfig();
     if (browserConfig.customConfig.headless) {
       mcpArgs.push('--headless');
     }
@@ -201,7 +203,7 @@ export class BrowserManager {
     }
 
     debugLogger.log(
-      `Launching chrome-devtools-mcp with args: ${mcpArgs.join(' ')}`,
+      `Launching chrome-devtools-mcp (${sessionMode} mode) with args: ${mcpArgs.join(' ')}`,
     );
 
     // Create stdio transport to npx chrome-devtools-mcp
