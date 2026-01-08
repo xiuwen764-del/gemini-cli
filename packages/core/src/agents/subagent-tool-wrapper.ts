@@ -14,6 +14,7 @@ import type { Config } from '../config/config.js';
 import type { AgentDefinition, AgentInputs } from './types.js';
 import { LocalSubagentInvocation } from './local-invocation.js';
 import { RemoteAgentInvocation } from './remote-invocation.js';
+import { BrowserAgentInvocation } from './browser/browserAgentInvocation.js';
 import type { MessageBus } from '../confirmation-bus/message-bus.js';
 
 /**
@@ -72,6 +73,17 @@ export class SubagentToolWrapper extends BaseDeclarativeTool<
     if (definition.kind === 'remote') {
       return new RemoteAgentInvocation(
         definition,
+        params,
+        effectiveMessageBus,
+        _toolName,
+        _toolDisplayName,
+      );
+    }
+
+    // Special handling for browser agent - needs async MCP setup
+    if (definition.name === 'browser_agent') {
+      return new BrowserAgentInvocation(
+        this.config,
         params,
         effectiveMessageBus,
         _toolName,
