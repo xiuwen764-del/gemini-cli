@@ -109,7 +109,27 @@ export class BrowserManager {
       undefined,
       { timeout: MCP_TIMEOUT_MS },
     );
-    return result as unknown as McpToolCallResult;
+    // Construct a typed result from the MCP SDK response.
+    // Map content items explicitly to avoid unsafe type assertions.
+    const content: McpContentItem[] | undefined = Array.isArray(result.content)
+      ? result.content.map(
+          (item: {
+            type?: string;
+            text?: string;
+            data?: string;
+            mimeType?: string;
+          }) => ({
+            type: item.type === 'image' ? 'image' : 'text',
+            text: item.text,
+            data: item.data,
+            mimeType: item.mimeType,
+          }),
+        )
+      : undefined;
+    return {
+      content,
+      isError: result.isError === true,
+    };
   }
 
   /**
@@ -249,8 +269,7 @@ export class BrowserManager {
     } catch (error) {
       // Provide actionable error for 'existing' mode failures
       if (sessionMode === 'existing') {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         throw new Error(
           `Failed to connect to existing Chrome instance: ${message}\n\n` +
             `To use sessionMode "existing", you must:\n` +
