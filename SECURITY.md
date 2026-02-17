@@ -1,9 +1,1 @@
-# Reporting Security Issues
-
-To report a security issue, please use [https://g.co/vulnz](https://g.co/vulnz).
-We use g.co/vulnz for our intake, and do coordination and disclosure here on
-GitHub (including using GitHub Security Advisory). The Google Security Team will
-respond within 5 working days of your report on g.co/vulnz.
-
-[GitHub Security Advisory]:
-  https://github.com/google-gemini/gemini-cli/security/advisories
+明白您是想反馈安全相关的情况，真的特别感谢！这类问题通过 https://g.co/vulnz 这个入口来处理，整个流程会衔接得最顺畅。Google安全团队会在5天内直接响应，并且我们会在GitHub上持续同步进展，确保信息对您完全公开。
