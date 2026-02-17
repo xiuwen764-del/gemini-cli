@@ -1384,7 +1384,9 @@ describe('SettingsDialog', () => {
 
   describe('String Settings Editing', () => {
     it('should allow editing and committing a string setting', async () => {
-      let settings = createMockSettings({ 'a.string.setting': 'initial' });
+      let settings = createMockSettings({
+        'editor.preferredEditor': 'initial',
+      });
       const onSelect = vi.fn();
 
       const { stdin, unmount, rerender, waitUntilReady } = render(
@@ -1394,11 +1396,18 @@ describe('SettingsDialog', () => {
       );
       await waitUntilReady();
 
-      // Navigate to the last setting
+      // Search for 'preferredEditor' to filter the list
       await act(async () => {
-        for (let i = 0; i < 20; i++) {
-          stdin.write('j'); // Down
-        }
+        stdin.write('/');
+      });
+      await act(async () => {
+        stdin.write('preferredEditor');
+      });
+      await waitUntilReady();
+
+      // Press Down Arrow to focus the list
+      await act(async () => {
+        stdin.write(TerminalKeys.DOWN_ARROW);
       });
       await waitUntilReady();
 
@@ -1418,8 +1427,8 @@ describe('SettingsDialog', () => {
 
       settings = createMockSettings({
         user: {
-          settings: { 'a.string.setting': 'new value' },
-          originalSettings: { 'a.string.setting': 'new value' },
+          settings: { 'editor.preferredEditor': 'new value' },
+          originalSettings: { 'editor.preferredEditor': 'new value' },
           path: '',
         },
       });
