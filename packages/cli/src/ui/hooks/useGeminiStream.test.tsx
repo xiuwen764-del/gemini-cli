@@ -10,7 +10,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act } from 'react';
 import { renderHookWithProviders } from '../../test-utils/render.js';
 import { waitFor } from '../../test-utils/async.js';
-import { useGeminiStream } from './useGeminiStream.js';
+import {
+  useGeminiStream,
+  getToolGroupBorderAppearance,
+} from './useGeminiStream.js';
 import { useKeypress } from './useKeypress.js';
 import * as atCommandProcessor from './atCommandProcessor.js';
 import type {
@@ -44,6 +47,8 @@ import type { Part, PartListUnion } from '@google/genai';
 import type { UseHistoryManagerReturn } from './useHistoryManager.js';
 import type { SlashCommandProcessorResult } from '../types.js';
 import { MessageType, StreamingState } from '../types.js';
+import { theme } from '../semantic-colors.js';
+
 import type { LoadedSettings } from '../../config/settings.js';
 
 // --- MOCKS ---
@@ -178,6 +183,77 @@ vi.mock('./useAlternateBuffer.js', () => ({
 // --- END MOCKS ---
 
 // --- Tests for useGeminiStream Hook ---
+describe('getToolGroupBorderAppearance', () => {
+  it('returns default border and no dim color when no tools are pending', () => {
+    const appearance = getToolGroupBorderAppearance(
+      [
+        {
+          status: CoreToolCallStatus.Success,
+          request: { name: 'list_directory' },
+        } as any,
+      ],
+      null,
+      false,
+    );
+    expect(appearance).toEqual({
+      borderColor: theme.border.default,
+      borderDimColor: false,
+    });
+  });
+
+  it('returns warning border and dim color when a non-shell tool is pending', () => {
+    const appearance = getToolGroupBorderAppearance(
+      [
+        {
+          status: CoreToolCallStatus.Executing,
+          request: { name: 'list_directory' },
+        } as any,
+      ],
+      null,
+      false,
+    );
+    expect(appearance).toEqual({
+      borderColor: theme.status.warning,
+      borderDimColor: true,
+    });
+  });
+
+  it('returns symbol border and dim color when a shell tool is pending but shell is not focused', () => {
+    const appearance = getToolGroupBorderAppearance(
+      [
+        {
+          status: CoreToolCallStatus.Executing,
+          request: { name: 'run_shell_command' },
+          pid: 123,
+        } as any,
+      ],
+      null,
+      false,
+    );
+    expect(appearance).toEqual({
+      borderColor: theme.ui.symbol,
+      borderDimColor: true,
+    });
+  });
+
+  it('returns symbol border and no dim color when a shell tool is pending and shell is focused', () => {
+    const appearance = getToolGroupBorderAppearance(
+      [
+        {
+          status: CoreToolCallStatus.Executing,
+          request: { name: 'run_shell_command' },
+          pid: 123,
+        } as any,
+      ],
+      123,
+      true,
+    );
+    expect(appearance).toEqual({
+      borderColor: theme.ui.symbol,
+      borderDimColor: false,
+    });
+  });
+});
 describe('useGeminiStream', () => {
   let mockAddItem = vi.fn();
   let mockOnDebugMessage = vi.fn();

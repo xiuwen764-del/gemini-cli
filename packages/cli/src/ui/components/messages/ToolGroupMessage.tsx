@@ -31,6 +31,8 @@ interface ToolGroupMessageProps {
   onShellInputSubmit?: (input: string) => void;
   borderTop?: boolean;
   borderBottom?: boolean;
+  borderColor?: string;
+  borderDimColor?: boolean;
 }
 
 // Main component renders the border and maps the tools using ToolMessage
@@ -44,6 +46,8 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   embeddedShellFocused,
   borderTop: borderTopOverride,
   borderBottom: borderBottomOverride,
+  borderColor: borderColorProp,
+  borderDimColor: borderDimColorProp,
 }) => {
   // Filter out tool calls that should be hidden (e.g. in-progress Ask User, or Plan Mode operations).
   const toolCalls = useMemo(
@@ -96,14 +100,16 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
 
   const isShellCommand = toolCalls.some((t) => isShellTool(t.name));
   const borderColor =
-    (isShellCommand && hasPending) || isEmbeddedShellFocused
+    borderColorProp ??
+    ((isShellCommand && hasPending) || isEmbeddedShellFocused
       ? theme.ui.symbol
       : hasPending
         ? theme.status.warning
-        : theme.border.default;
+        : theme.border.default);
 
   const borderDimColor =
-    hasPending && (!isShellCommand || !isEmbeddedShellFocused);
+    borderDimColorProp ??
+    (hasPending && (!isShellCommand || !isEmbeddedShellFocused));
 
   const staticHeight = /* border */ 2 + /* marginBottom */ 1;
 
